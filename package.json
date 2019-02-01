@@ -1,0 +1,85 @@
+{
+    "name": "launchpad",
+    "description": "A starting point for simple front-end and WordPress development projects.",
+    "version": "1.0.0",
+    "keywords": [
+        "css",
+        "sass",
+        "scss",
+        "mobile-first",
+        "responsive",
+        "front-end",
+        "web",
+        "wordpress",
+        "javascript",
+        "gulp"
+    ],
+    "homepage": "https://github.com/jdaio/launchpad#readme",
+    "author": {
+        "name": "Jamal Ali-Mohammed",
+        "email": "jamal.ali.mohammed@gmail.com",
+        "url": "https://jdaio.github.io/"
+    },
+    "contributors": [
+        "Digital Heat, LLC."
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jdaio/launchpad.git"
+    },
+    "bugs": {
+        "url": "https://github.com/jdaio/hubandspoke-2018/issues"
+    },
+    "license": "GPL-3.0-or-later",
+    "engines": {
+        "node": ">=6",
+        "npm": ">=3"
+    },
+    "files": [
+        "dist/**/*.*",
+        "src/assets/inc/**/*.*",
+        "src/assets/{js,scss}/*.{js,scss}",
+        "src/html/*.html",
+        "src/media/**/*.{svg,png,jpg,gif,mp4,ogg,mkv,webm}",
+        "src/wp/**/*.{php,twig,txt,png,svg,css}"
+    ],
+    "devDependencies": {
+        "@babel/core": "^7.2.2",
+        "@babel/preset-env": "^7.3.1",
+        "@babel/register": "^7.0.0",
+        "autoprefixer": "^9.4.7",
+        "babelify": "^10.0.0",
+        "browser-sync": "^2.26.3",
+        "browserify": "^16.2.3",
+        "css-mqpacker": "^7.0.0",
+        "cssnano": "^4.1.8",
+        "del": "^3.0.0",
+        "eslint": "^5.12.1",
+        "eslint-config-airbnb-base": "^13.1.0",
+        "eslint-plugin-import": "^2.16.0",
+        "faster.js": "^1.1.0",
+        "gulp": "^4.0.0",
+        "gulp-eslint": "^5.0.0",
+        "gulp-header": "^2.0.7",
+        "gulp-imagemin": "^5.0.3",
+        "gulp-newer": "^1.4.0",
+        "gulp-postcss": "^8.0.0",
+        "gulp-rename": "^1.4.0",
+        "gulp-replace": "^1.0.0",
+        "gulp-sass": "^4.0.2",
+        "gulp-sourcemaps": "^2.6.4",
+        "gulp-strip-comments": "^2.5.2",
+        "modernizr": "^3.6.0",
+        "stylelint": "^9.10.1",
+        "stylelint-config-recommended": "^2.1.0",
+        "vinyl-buffer": "^1.0.1",
+        "vinyl-source-stream": "^2.0.0",
+        "yargs": "^12.0.5"
+    },
+    "dependencies": {
+        "aos": "^2.3.4",
+        "bootstrap": "^4.2.1",
+        "jquery": "^3.3.1",
+        "popper.js": "^1.14.7"
+    }
+}
