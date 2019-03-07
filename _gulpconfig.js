@@ -46,8 +46,8 @@ module.exports = {
             ],
         },
 
-        // Style
-        css: {
+        // Style (SCSS)
+        scss: {
             root: 'assets/scss',
             dirs: [
                 'components',

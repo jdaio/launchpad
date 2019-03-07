@@ -26,6 +26,7 @@ import gulp from 'gulp';
 import del from 'del';
 import fs from 'fs';
 import fsExtra from 'fs-extra';
+import glob from 'glob';
 import newer from 'gulp-newer';
 import rename from 'gulp-rename';
 import replace from 'gulp-replace';
@@ -79,8 +80,8 @@ const scriptOutput = config.scriptOutput.length > 0 ? config.scriptOutput : 'app
 const styleEntry = config.styleEntry.length > 0 ? config.styleEntry : 'main';
 const styleOutput = config.styleOutput.length > 0 ? config.styleOutput : 'style';
 
-// Helper task to clear the build directory before it's added to again.
-gulp.task('clean', done => del(config.projectBuildDir)
+// Helper task to clear the build/dist directory before it's added to again.
+gulp.task('util:clean', done => del([config.projectBuildDir, config.projectDistDir])
     .then(() => done()));
 
 /**
@@ -103,46 +104,55 @@ function exitGulp(err) {
     throw Error(errorMessage);
 }
 
-// Parameter 'test' is a boolean and defaults to true.
-function preFlight(runChecks = true) {
-    if (runChecks) {
-        console.log('[PreFlight] Checking to see if everything is ready to go...');
 
-        // Check to see if the gulp configuration file exists.
+const preFlight = {
+    check: () => {
         try {
+            // Checks if configuration file exists.
             fs.accessSync('./_gulpconfig.js');
-            console.log('[PreFlight] Configuration file located!');
         } catch (e) {
-            exitGulp('[PreFlight] Configuration file not found!');
+            exitGulp('[PreFlight] Gulp configuration file not found! Please create it or fetch it from the launchpad repo.');
         }
 
-        // Check if the source code folder exists. If not, then create the directory structure.
         try {
-            fs.statSync(directories.source.root)
+            fs.statSync(config.projectSourceDir)
                 .isDirectory();
         } catch (e) {
-            console.log('[PreFlight] Source code folder not located, creating directory structure...');
+            exitGulp('[PreFlight] Source folder directory not found! Please run `npm run setup` to create the project folder structure.');
+        }
 
-            for (const [key, type] of Object.entries(directories)) {
-                const currentFolder = `${config.projectSourceDir}/${type.root}`;
+        return false;
+    },
+    run: () => {
+        console.log('[PreFlight] Setting up project folder structure...');
 
-                fsExtra.mkdirpSync(currentFolder);
+        for (const [key, type] of Object.entries(directories)) {
+            const currentFolder = `${config.projectSourceDir}/${type.root}`;
 
-                if (type.hasOwnProperty('dirs') && type.dirs.length > 0) {
-                    for (const subFolder of type.dirs) {
-                        fsExtra.mkdirpSync(`${currentFolder}/${subFolder}`);
-                    }
+            fsExtra.mkdirpSync(currentFolder);
+
+            if (type.hasOwnProperty('dirs') && type.dirs.length > 0) {
+                for (const subFolder of type.dirs) {
+                    fsExtra.mkdirpSync(`${currentFolder}/${subFolder}`);
                 }
             }
-
-            console.log('[PreFlight] Source code folders created!');
         }
-    }
 
-    return false;
-}
+        console.log('[PreFlight] Project folders successfully created!');
+    },
+};
 
-preFlight();
+gulp.task('proj:check', (done) => {
+    preFlight.check();
+    done();
+});
+
+gulp.task('proj:init', (done) => {
+    console.log('[PreFlight] Initializing the project...');
+
+    preFlight.run();
+    done();
+});
 
 /**
  * -----------------------------------------------------------------------------
@@ -170,6 +180,10 @@ function runBrowserSync() {
     });
 }
 
+gulp.task('bs:reload', () => browserSync.reload());
+
+gulp.task('bs:stream', () => browserSync.stream());
+
 /**
  * -----------------------------------------------------------------------------
  * Javascript Bundling
@@ -179,8 +193,8 @@ function runBrowserSync() {
  * -----------------------------------------------------------------------------
  */
 
-function buildScripts(watch = false, prod = false) {
-    const b = browserify(scriptEntry, {
+function buildScripts(prod = false, watch = false) {
+    const b = browserify(`${config.projectSourceDir}/${directories.js.root}/${scriptEntry}.js`, {
             debug: true,
         })
         .transform(babel);
@@ -229,12 +243,13 @@ gulp.task('js:build', (done) => {
 });
 
 gulp.task('js:dev', (done) => {
-    buildScripts(true);
+    buildScripts(false, true);
+    browserSync.reload();
     done();
 });
 
 gulp.task('js:prod', (done) => {
-    buildScripts(false, true);
+    buildScripts(true, false);
     done();
 });
 
@@ -259,7 +274,7 @@ function buildStyles(prod = false, watch = false) {
         ' */\n\n',
     ].join('\n');
 
-    let stream = gulp.src(`${config.projectSourceDir}/${directories.css.root}/${styleEntry}.scss`)
+    let stream = gulp.src(`${config.projectSourceDir}/${directories.scss.root}/${styleEntry}.scss`)
         .pipe(plumber())
         .pipe(header(styleBanner))
         .pipe(rename(`${styleOutput}.min.css`));
@@ -275,7 +290,7 @@ function buildStyles(prod = false, watch = false) {
             }))
             .pipe(postcss(config.stylePlugins))
             .pipe(sourcemaps.write('./'))
-            .pipe(gulp.dest(`${config.projectBuildDir}/${directories.css.root}`));
+            .pipe(gulp.dest(`${config.projectBuildDir}/assets/css`));
     } else {
         stream = stream.pipe(sass({
                 includePaths: config.styleIncludePaths,
@@ -283,7 +298,7 @@ function buildStyles(prod = false, watch = false) {
                 outputStyle: 'compressed',
             }))
             .pipe(postcss(config.stylePlugins))
-            .pipe(gulp.dest(`${config.projectDistDir}/${directories.css.root}`));
+            .pipe(gulp.dest(`${config.projectDistDir}/assets/css`));
     }
 
     if (watch) {
@@ -308,18 +323,20 @@ gulp.task('css:prod', () => buildStyles(true));
  * -----------------------------------------------------------------------------
  */
 
-function buildIncludes(prod = false, watch = false) {
+function buildIncludes(prod = false) {
     let stream = gulp.src(`${config.projectSourceDir}/${directories.inc.root}/**.*`);
+
+    // If there are no files to copy over, exit the function early.
+    if (glob.sync(`${config.projectSourceDir}/${directories.inc.root}/**.*`)
+        .length === 0) {
+        return false;
+    }
 
     if (!prod) {
         stream = stream.pipe(newer(`${config.projectBuildDir}/${directories.inc.root}`))
             .pipe(gulp.dest(`${config.projectBuildDir}/${directories.inc.root}`));
     } else {
         stream = stream.pipe(gulp.dest(`${config.projectDistDir}/${directories.inc.root}`));
-    }
-
-    if (watch) {
-        stream = stream.pipe(browserSync.reload());
     }
 
     return stream;
@@ -346,7 +363,7 @@ function buildViews(prod = false, watch = false) {
         stream = stream.pipe(newer(`${config.projectBuildDir}/${directories.views.root}`))
             .pipe(gulp.dest(config.projectBuildDir));
     } else {
-        stream = stream.pipe(stripComments())
+        stream = stream.pipe(stripComments.html())
             .pipe(gulp.dest(config.projectDistDir));
     }
 
@@ -372,6 +389,12 @@ gulp.task('views:prod', () => buildViews(true));
  */
 
 function buildImages(prod = false, watch = false) {
+    // If there are no files to copy over, exit the function early.
+    if (glob.sync(`${config.projectSourceDir}/${directories.img.root}/**`)
+        .length === 0) {
+        return false;
+    }
+
     // Import GIF Optimization Options
     const imgGifInterlace = config.imgGifInterlace.length > 0 ? config.imgGifInterlace : false;
     const imgGifOptimizationLevel = config.imgGifOptimizationLevel.length > 0 ? config.imgGifOptimizationLevel : 1;
@@ -423,7 +446,7 @@ function buildImages(prod = false, watch = false) {
     }
 
     if (watch) {
-        stream = stream.pipe(browserSync.reload());
+        stream = stream.pipe(browserSync.stream());
     }
 
     return stream;
@@ -445,10 +468,10 @@ gulp.task('img:prod', () => buildImages(true));
 
 gulp.task('watch', () => {
     gulp.watch(`${config.projectSourceDir}/${directories.js.root}/**/*.js`, gulp.series('js:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.css.root}/**/*.scss`, gulp.series('css:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.inc.root}/**.*`, gulp.series('inc:dev'));
+    gulp.watch(`${config.projectSourceDir}/${directories.scss.root}/**/*.scss`, gulp.series('css:dev'));
+    gulp.watch(`${config.projectSourceDir}/${directories.inc.root}/**.*`, gulp.series('inc:dev', 'bs:reload'));
     gulp.watch(`${config.projectSourceDir}/${directories.views.root}/**/*.*`, gulp.series('views:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.views.root}/**`, gulp.series('img:dev'));
+    gulp.watch(`${config.projectSourceDir}/${directories.img.root}/**`, gulp.series('img:dev'));
 });
 
 /**
@@ -459,11 +482,11 @@ gulp.task('watch', () => {
  * -----------------------------------------------------------------------------
  */
 
-gulp.task('render:build', gulp.series('clean', gulp.parallel('js:build', 'css:build', 'inc:build', 'views:build', 'img:build')));
+gulp.task('render:build', gulp.series('proj:check', 'util:clean', gulp.parallel('js:build', 'css:build', 'inc:build', 'views:build', 'img:build')));
 
-gulp.task('render:dev', gulp.series('clean', gulp.parallel('js:dev', 'css:dev', 'inc:dev', 'views:dev', 'img:dev', runBrowserSync, 'watch')));
+gulp.task('render:dev', gulp.series('proj:check', 'util:clean', gulp.parallel('js:dev', 'css:dev', 'inc:dev', 'views:dev', 'img:dev', runBrowserSync, 'watch')));
 
-gulp.task('render:prod', gulp.parallel('js:prod', 'css:prod', 'inc:prod', 'views:prod', 'img:prod'));
+gulp.task('render:prod', gulp.parallel('proj:check', 'js:prod', 'css:prod', 'inc:prod', 'views:prod', 'img:prod'));
 
 gulp.task('default', () => {
     console.log('Please use the NPM commands or specific gulp task names rather than running `gulp default`.');
