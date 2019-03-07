@@ -1,11 +1,8 @@
 module.exports = {
     presets: [
-        '@babel/preset-env',
-        {
-            spec: true
-        }
+        '@babel/preset-env'
     ],
     plugins: [
-        'faster.js'
+        'module:faster.js'
     ],
 };
