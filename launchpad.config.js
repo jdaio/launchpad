@@ -84,6 +84,7 @@ module.exports = {
     // Team's Email ID
     team: 'Digital Heat <team@digitalheat.co>',
 
+
     /**
      * Watch File Paths
      */
@@ -94,6 +95,9 @@ module.exports = {
     // Scripts
     watchScripts: './assets/js/**/*.js',
 
-    // PHP, HTML, etc.
-    watchViews: './**/*.{php,html,txt}', // Path to all PHP files.
+    // HTML Files
+    watchViews: './html/**/*.html',
+
+    // PHP Files
+    watchPHP: './src/**/*.php',
 };

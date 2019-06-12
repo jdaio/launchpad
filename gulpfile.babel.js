@@ -52,12 +52,11 @@ import sort from 'gulp-sort';
 import wpPot from 'gulp-wp-pot';
 
 // Import Utility Modules
-import beep from 'beepbeep';
 import browserSync from 'browser-sync';
 import cache from 'gulp-cache';
 import exit from 'gulp-exit';
 import lineec from 'gulp-line-ending-corrector';
-import notify from 'gulp-notify';
+import log from 'fancy-log';
 import rename from 'gulp-rename';
 
 // Import Launchpad Gulp Configuration
@@ -73,8 +72,7 @@ import config from './launchpad.config';
  */
 
 const errorHandler = (r) => {
-    notify.onError('\n\n❌  ===> ERROR: <%= error.message %>\n')(r);
-    beep();
+    log.error('❌ ERROR: <%= error.message %>')(r);
 };
 
 
@@ -90,7 +88,7 @@ const errorHandler = (r) => {
  */
 
 // Setup Browser Sync.
-const browsersync = (done) => {
+function runBrowserSync() {
     browserSync.init({
         ghostMode: false,
         injectChanges: true,
@@ -98,24 +96,20 @@ const browsersync = (done) => {
         notify: false,
         open: false,
         scrollProportionally: false,
-        server: ['./', './html-skel'],
+        server: ['./', './html'],
         watchEvents: ['change', 'add', 'unlink', 'addDir', 'unlinkDir'],
     });
+}
 
-    done();
-};
-
-// Helper functions to allow browser reload and stream with Gulp 4.
-const bsReload = (done) => {
+function bsReload(done) {
     browserSync.reload();
     done();
-};
+}
 
-const bsStream = (done) => {
+function bsStream(done) {
     browserSync.stream();
     done();
-};
-
+}
 
 /**
  * -----------------------------------------------------------------------------
@@ -137,6 +131,7 @@ gulp.task('styles', () => gulp.src(config.styleEntry, {
         allowEmpty: true,
     })
     .pipe(plumber(errorHandler))
+    .pipe(rename('style.min.css'))
     .pipe(sourcemaps.init({
         loadMaps: true,
     }))
@@ -157,17 +152,10 @@ gulp.task('styles', () => gulp.src(config.styleEntry, {
             },
         }),
     ]))
-    .pipe(sourcemaps.write('./', {
-        includeContent: false,
-    }))
+    .pipe(sourcemaps.write('./'))
     .pipe(lineec())
-    .pipe(rename('style.min.css'))
     .pipe(gulp.dest('./dist/css'))
-    .pipe(bsStream())
-    .pipe(notify({
-        message: '\n\n✅  ===> STYLES — completed!\n',
-        onLast: true,
-    })));
+    .on('end', () => log('✅ STYLES — completed!')));
 
 
 /**
@@ -187,7 +175,7 @@ function compileScripts(watch) {
         .transform(babel));
 
     function rebundle() {
-        console.log('-> Bundling scripts...');
+        log('-> Bundling scripts...');
 
         return bundler
             .bundle()
@@ -202,11 +190,7 @@ function compileScripts(watch) {
             .pipe(sourcemaps.write('./'))
             .pipe(lineec())
             .pipe(gulp.dest('./dist/js'))
-            .pipe(bsReload())
-            .pipe(notify({
-                message: '\n\n✅  ===> JS — completed!\n',
-                onLast: true,
-            }));
+            .on('end', () => log('✅ JS — completed!'));
     }
 
     if (watch) {
@@ -223,7 +207,8 @@ function watchScripts() {
     return compileScripts(true);
 }
 
-gulp.task('scripts', gulp.parallel(watchScripts), done => done());
+gulp.task('scripts:build', gulp.series(compileScripts));
+gulp.task('scripts:dev', gulp.series(watchScripts), done => done());
 
 
 /**
@@ -269,11 +254,7 @@ gulp.task('images', () => gulp.src(config.imgSource)
         ])
     ))
     .pipe(gulp.dest('./dist/img/'))
-    .pipe(bsReload())
-    .pipe(notify({
-        message: '\n\n✅  ===> IMAGES — completed!\n',
-        onLast: true,
-    })));
+    .on('end', () => log('✅ IMAGES — completed!')));
 
 
 /**
@@ -286,6 +267,20 @@ gulp.task('images', () => gulp.src(config.imgSource)
  */
 
 gulp.task('clearCache', done => cache.clearAll(done));
+
+
+/**
+ * -----------------------------------------------------------------------------
+ * Task: `views:dev`.
+ *
+ * @description Watch HTML files for changes and inject the new code.
+ * -----------------------------------------------------------------------------
+ */
+
+function renderViews() {
+    return gulp.src(config.watchViews)
+        .pipe(browserSync.stream());
+}
 
 
 /**
@@ -310,13 +305,10 @@ gulp.task('translate', () => gulp.src(config.watchPHP)
         package: config.packageName,
         bugReport: config.bugReport,
         lastTranslator: config.lastTranslator,
-        team: config.team
+        team: config.team,
     }))
     .pipe(gulp.dest(`${config.translationDestination}/${config.translationFile}`))
-    .pipe(notify({
-        message: '\n\n✅  ===> TRANSLATE — completed!\n',
-        onLast: true,
-    })));
+    .on('end', () => log('✅ TRANSLATE — completed!')));
 
 
 /**
@@ -327,15 +319,11 @@ gulp.task('translate', () => gulp.src(config.watchPHP)
  * -----------------------------------------------------------------------------
  */
 
-gulp.task('default', gulp.parallel(
-    'styles',
-    'scripts',
-    'images',
-    browsersync,
-    () => {
-        gulp.watch(config.watchViews, bsStream);
-        gulp.watch(config.watchStyles, gulp.parallel('styles'));
-        gulp.watch(config.watchJsCustom, gulp.series('scripts'));
-        gulp.watch(config.imgSRC, gulp.series('images'));
-    },
-));
+gulp.task('watch', () => {
+    gulp.watch(config.watchViews, gulp.series(renderViews));
+    gulp.watch(config.watchStyles, gulp.series('styles', bsStream));
+    gulp.watch(config.watchScripts, gulp.series('scripts:dev', bsReload));
+    gulp.watch(config.imgSource, gulp.series('images', bsStream));
+});
+
+gulp.task('default', gulp.parallel('styles', 'scripts:dev', 'images', runBrowserSync, 'watch'));
