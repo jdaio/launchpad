@@ -6,16 +6,30 @@
     "increment": "minor",
     "beforeChangelogCommand": "auto-changelog",
     "safeBump": false,
-    "src": {
-        "commitMessage": "🦄 Release %s",
-        "tagAnnotation": "🦄 Release %s"
+    "git": {
+        "changelog": "git log --pretty=format:\"* %s (%h)\" ${latestTag}...HEAD",
+        "requireCleanWorkingDir": true,
+        "requireUpstream": true,
+        "requireCommits": false,
+        "addUntrackedFiles": false,
+        "commit": true,
+        "commitMessage": "Release ${version}",
+        "commitArgs": "",
+        "tag": true,
+        "tagName": "${version}",
+        "tagAnnotation": "Release ${version}",
+        "tagArgs": "",
+        "push": true,
+        "pushArgs": "--follow-tags",
+        "pushRepo": "origin"
     },
-    "npm": {
-        "publish": true
+    "src": {
+        "commitMessage": "Release v${version}",
+        "tagAnnotation": "Release v${version}"
     },
     "github": {
         "release": true,
-        "releaseName": "🦄 %s"
+        "releaseName": "v${version}"
     },
     "prompt": {
         "src": {
