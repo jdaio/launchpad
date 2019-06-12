@@ -1,6 +1,9 @@
 /**
  * -----------------------------------------------------------------------------
- * Gulpfile
+ * Launchpad Gulpfile
+ *
+ * Inspired by Ahmad Awais' WPGulp Setup:
+ * https://github.com/ahmadawais/WPGulp
  *
  * Licensed under GPL v3.0:
  * https://github.com/jdaio/launchpad/blob/master/LICENSE
@@ -9,11 +12,12 @@
  *
  * @overview Handles all file processing tasks, as well as BrowserSync, etc.
  *
- * @author Jamal Ali-Mohammed (https://jdaio.github.io)
+ * @author Jamal Ali-Mohammed <https://jdaio.github.io>
  *
  * @version 1.0.0
  * -----------------------------------------------------------------------------
  */
+
 
 /**
  * -----------------------------------------------------------------------------
@@ -21,475 +25,317 @@
  * -----------------------------------------------------------------------------
  */
 
-// Import Base Objects and Utilities
+// Import Gulp
 import gulp from 'gulp';
-import del from 'del';
-import fs from 'fs';
-import fsExtra from 'fs-extra';
-import glob from 'glob';
-import newer from 'gulp-newer';
-import rename from 'gulp-rename';
-import replace from 'gulp-replace';
-import buffer from 'vinyl-buffer';
-import source from 'vinyl-source-stream';
-import plumber from 'gulp-plumber';
 
-// Import Code Utilities
-import browserSync from 'browser-sync';
-import header from 'gulp-header';
-import sourcemaps from 'gulp-sourcemaps';
-import stripComments from 'gulp-strip-comments';
-
-// Import JS Utilities
-import babel from 'babelify';
-import browserify from 'browserify';
-import watchify from 'watchify';
-import uglify from 'gulp-uglify';
-
-// Import CSS Utilities
+// Import CSS Modules
+import mqp from 'css-mqpacker';
+import nano from 'cssnano';
 import postcss from 'gulp-postcss';
 import sass from 'gulp-sass';
+import sourcemaps from 'gulp-sourcemaps';
 
-// Import Image Utilities
+// Import Javascript Modules
+import babel from 'babelify';
+import browserify from 'browserify';
+import buffer from 'vinyl-buffer';
+import plumber from 'gulp-plumber';
+import source from 'vinyl-source-stream';
+import uglify from 'gulp-uglify';
+import watchify from 'watchify';
+
+// Import Image Related Modules
 import imagemin from 'gulp-imagemin';
 
-// Import Configuration
-import config from './_gulpconfig';
+// Import Wordpress Related Modules
+import sort from 'gulp-sort';
+import wpPot from 'gulp-wp-pot';
 
-// Import Project Info
-import projInfo from './package.json';
+// Import Utility Modules
+import beep from 'beepbeep';
+import browserSync from 'browser-sync';
+import cache from 'gulp-cache';
+import exit from 'gulp-exit';
+import lineec from 'gulp-line-ending-corrector';
+import notify from 'gulp-notify';
+import rename from 'gulp-rename';
+
+// Import Launchpad Gulp Configuration
+import config from './launchpad.config';
+
 
 /**
  * -----------------------------------------------------------------------------
- * Module Imports, Utilities & Settings
+ * Custom Error Handling
  *
- * @description Default variables used in processes below.
+ * @param Mixed err
  * -----------------------------------------------------------------------------
  */
 
-// Get Project Directories
-const directories = config.projectDevDirs;
-
-// Get Today's Date and Year
-const today = new Date();
-const year = today.getFullYear();
-
-// Get Style and Script Entry & Output Names
-const scriptEntry = config.scriptEntry.length > 0 ? config.scriptEntry : 'index';
-const scriptOutput = config.scriptOutput.length > 0 ? config.scriptOutput : 'app';
-const styleEntry = config.styleEntry.length > 0 ? config.styleEntry : 'main';
-const styleOutput = config.styleOutput.length > 0 ? config.styleOutput : 'style';
-
-// Helper task to clear the build/dist directory before it's added to again.
-gulp.task('util:clean', done => del([config.projectBuildDir, config.projectDistDir])
-    .then(() => done()));
-
-/**
- * -----------------------------------------------------------------------------
- * Startup Checks
- *
- * @description Checks to see if conditions are met before proceeding with the
- *              gulp tasks.
- * -----------------------------------------------------------------------------
- */
-
-// Function to manually exit Gulpfile on error.
-function exitGulp(err) {
-    // Check if an error message was passed into the function.
-    const errorMessage = err.length > 0 ?
-        err :
-        'An error has occurred. Gulp task terminated.';
-
-    // Exit the gulp process with the appropriate method.
-    throw Error(errorMessage);
-}
-
-
-const preFlight = {
-    check: () => {
-        try {
-            // Checks if configuration file exists.
-            fs.accessSync('./_gulpconfig.js');
-        } catch (e) {
-            exitGulp('[PreFlight] Gulp configuration file not found! Please create it or fetch it from the launchpad repo.');
-        }
-
-        try {
-            fs.statSync(config.projectSourceDir)
-                .isDirectory();
-        } catch (e) {
-            exitGulp('[PreFlight] Source folder directory not found! Please run `npm run setup` to create the project folder structure.');
-        }
-
-        return false;
-    },
-    run: () => {
-        console.log('[PreFlight] Setting up project folder structure...');
-
-        for (const [key, type] of Object.entries(directories)) {
-            const currentFolder = `${config.projectSourceDir}/${type.root}`;
-
-            fsExtra.mkdirpSync(currentFolder);
-
-            if (type.hasOwnProperty('dirs') && type.dirs.length > 0) {
-                for (const subFolder of type.dirs) {
-                    fsExtra.mkdirpSync(`${currentFolder}/${subFolder}`);
-                }
-            }
-        }
-
-        console.log('[PreFlight] Project folders successfully created!');
-    },
+const errorHandler = (r) => {
+    notify.onError('\n\n❌  ===> ERROR: <%= error.message %>\n')(r);
+    beep();
 };
 
-gulp.task('proj:check', (done) => {
-    preFlight.check();
-    done();
-});
-
-gulp.task('proj:init', (done) => {
-    console.log('[PreFlight] Initializing the project...');
-
-    preFlight.run();
-    done();
-});
 
 /**
  * -----------------------------------------------------------------------------
- * BrowserSync Setup
+ * Task: `browser-sync`.
  *
- * @description BrowserSync runtime options.
+ * @description Handles live reloads, CSS injections, and Localhost tunneling.
+ * @link http://www.browsersync.io/docs/options/
+ *
+ * @param {Mixed} done Done.
  * -----------------------------------------------------------------------------
  */
 
-function runBrowserSync() {
-    const bsBrowserAutoOpen = config.bsBrowserAutoOpen.length > 0 ? config.bsBrowserAutoOpen : false;
-    const bsGhostMode = config.bsGhostMode.length > 0 ? config.bsGhostMode : false;
-    const bsNotify = config.bsNotify.length > 0 ? config.bsNotify : false;
-    const bsScrollProportionally = config.bsScrollProportionally.length > 0 ? config.bsScrollProportionally : false;
-    const bsInjectChanges = config.bsInjectChanges.length > 0 ? config.bsScrollProportionally : true;
-
+// Setup Browser Sync.
+const browsersync = (done) => {
     browserSync.init({
-        ghostMode: bsGhostMode,
-        logPrefix: config.projectName,
-        notify: bsNotify,
-        open: bsBrowserAutoOpen,
-        server: config.projectBuildDir,
-        scrollProportionally: bsScrollProportionally,
-        injectChanges: bsInjectChanges,
+        ghostMode: false,
+        injectChanges: true,
+        logPrefix: 'launchpad',
+        notify: false,
+        open: false,
+        scrollProportionally: false,
+        server: ['./', './html-skel'],
+        watchEvents: ['change', 'add', 'unlink', 'addDir', 'unlinkDir'],
     });
-}
 
-gulp.task('bs:reload', () => browserSync.reload());
-
-gulp.task('bs:stream', () => browserSync.stream());
-
-/**
- * -----------------------------------------------------------------------------
- * Javascript Bundling
- *
- * @description Sets up watchify/browserify for bundling, uglifies and minifies
- *              javascript files as well as concatenating vendor files.
- * -----------------------------------------------------------------------------
- */
-
-function buildScripts(prod = false, watch = false) {
-    const b = browserify(`${config.projectSourceDir}/${directories.js.root}/${scriptEntry}.js`, {
-            debug: true,
-        })
-        .transform(babel);
-
-    function bundler(pkg) {
-        let stream = pkg.bundle()
-            .on('error', (err) => {
-                console.error(err);
-                this.emit('end');
-            })
-            .pipe(source(`${scriptEntry}.js`))
-            .pipe(buffer())
-            .pipe(rename(`${scriptOutput}.min.js`));
-
-        if (!prod) {
-            stream = stream.pipe(sourcemaps.init({
-                    loadMaps: true,
-                }))
-                .pipe(sourcemaps.write('./'))
-                .pipe(gulp.dest(`${config.projectBuildDir}/${directories.js.root}`));
-        } else {
-            stream = stream.pipe(uglify())
-                .pipe(gulp.dest(`${config.projectDistDir}/${directories.js.root}`));
-        }
-
-        return stream;
-    }
-
-    if (watch) {
-        watchify(b)
-            .on('update', () => {
-                console.log('-> Rebundling scripts...');
-                bundler(watchify(b));
-                console.log('All javascript processed.');
-            });
-
-        console.log('[Browserify] Watching javascript codebase for changes...');
-    }
-
-    bundler(b);
-}
-
-gulp.task('js:build', (done) => {
-    buildScripts();
     done();
-});
+};
 
-gulp.task('js:dev', (done) => {
-    buildScripts(false, true);
+// Helper functions to allow browser reload and stream with Gulp 4.
+const bsReload = (done) => {
     browserSync.reload();
     done();
-});
+};
 
-gulp.task('js:prod', (done) => {
-    buildScripts(true, false);
+const bsStream = (done) => {
+    browserSync.stream();
     done();
-});
+};
+
 
 /**
  * -----------------------------------------------------------------------------
- * Style Rendering
+ * Task: `styles`.
  *
- * @description Compiles, autoprefixes, processes and minifies SCSS, SASS and
- *              LESS to CSS.
+ * @description Compiles SCSS, Autoprefixes and minifies CSS.
+ *
+ * This task does the following:
+ *    1. Gets the source SCSS file.
+ *    2. Compiles SCSS to CSS.
+ *    3. Combines media queries and autoprefixes with PostCSS.
+ *    4. Writes the sourcemaps for it.
+ *    5. Renames the CSS file to style.min.css.
+ *    7. Injects CSS via Browser Sync.
  * -----------------------------------------------------------------------------
  */
 
-function buildStyles(prod = false, watch = false) {
-    const styleBanner = [
-        '@charset \'UTF-8\';',
-        '/*!',
-        ` * ${config.projectName} v${projInfo.version} (${projInfo.homepage})`,
-        ` * Author: ${projInfo.author.name}`,
-        ` * Author URI: ${projInfo.author.url}`,
-        ` * Copyright ${year}, ${projInfo.author.name}`,
-        ` * Licensed under ${projInfo.license} (${config.projectLicenseURI})`,
-        ' */\n\n',
-    ].join('\n');
+gulp.task('styles', () => gulp.src(config.styleEntry, {
+        allowEmpty: true,
+    })
+    .pipe(plumber(errorHandler))
+    .pipe(sourcemaps.init({
+        loadMaps: true,
+    }))
+    .pipe(sass({
+        errorLogToConsole: true,
+        indentWidth: 4,
+        outputStyle: 'compressed',
+        precision: 10,
+    }))
+    .on('error', sass.logError)
+    .pipe(postcss([
+        mqp({
+            sort: true,
+        }),
+        nano({
+            autoprefixer: {
+                browsers: config.BROWSERS_LIST,
+            },
+        }),
+    ]))
+    .pipe(sourcemaps.write('./', {
+        includeContent: false,
+    }))
+    .pipe(lineec())
+    .pipe(rename('style.min.css'))
+    .pipe(gulp.dest('./dist/css'))
+    .pipe(bsStream())
+    .pipe(notify({
+        message: '\n\n✅  ===> STYLES — completed!\n',
+        onLast: true,
+    })));
 
-    let stream = gulp.src(`${config.projectSourceDir}/${directories.scss.root}/${styleEntry}.scss`)
-        .pipe(plumber())
-        .pipe(header(styleBanner))
-        .pipe(rename(`${styleOutput}.min.css`));
 
-    if (!prod) {
-        stream = stream.pipe(sourcemaps.init({
+/**
+ * -----------------------------------------------------------------------------
+ * Task: `scripts`.
+ *
+ * @description Bundles javascript with Browserify.
+ *
+ * @todo Fill out a description for this section.
+ * -----------------------------------------------------------------------------
+ */
+
+function compileScripts(watch) {
+    const bundler = watchify(browserify(config.jsEntry, {
+            debug: true,
+        })
+        .transform(babel));
+
+    function rebundle() {
+        console.log('-> Bundling scripts...');
+
+        return bundler
+            .bundle()
+            .pipe(plumber(errorHandler))
+            .pipe(source('build.js'))
+            .pipe(buffer())
+            .pipe(rename('app.min.js'))
+            .pipe(sourcemaps.init({
                 loadMaps: true,
             }))
-            .pipe(sass({
-                includePaths: config.styleIncludePaths,
-                indentWidth: 4,
-                outputStyle: 'compressed',
-            }))
-            .pipe(postcss(config.stylePlugins))
+            .pipe(uglify())
             .pipe(sourcemaps.write('./'))
-            .pipe(gulp.dest(`${config.projectBuildDir}/assets/css`));
-    } else {
-        stream = stream.pipe(sass({
-                includePaths: config.styleIncludePaths,
-                indentWidth: 4,
-                outputStyle: 'compressed',
-            }))
-            .pipe(postcss(config.stylePlugins))
-            .pipe(gulp.dest(`${config.projectDistDir}/assets/css`));
+            .pipe(lineec())
+            .pipe(gulp.dest('./dist/js'))
+            .pipe(bsReload())
+            .pipe(notify({
+                message: '\n\n✅  ===> JS — completed!\n',
+                onLast: true,
+            }));
     }
 
     if (watch) {
-        stream = stream.pipe(browserSync.stream());
-    }
+        bundler.on('update', () => rebundle());
 
-    return stream;
-}
-
-gulp.task('css:build', () => buildStyles());
-
-gulp.task('css:dev', () => buildStyles(false, true));
-
-gulp.task('css:prod', () => buildStyles(true));
-
-/**
- * -----------------------------------------------------------------------------
- * Copy Included Assets
- *
- * @description Copies all files from the include folder in assets to their
- *              respective directories.
- * -----------------------------------------------------------------------------
- */
-
-function buildIncludes(prod = false) {
-    let stream = gulp.src(`${config.projectSourceDir}/${directories.inc.root}/**.*`);
-
-    // If there are no files to copy over, exit the function early.
-    if (glob.sync(`${config.projectSourceDir}/${directories.inc.root}/**.*`)
-        .length === 0) {
-        return false;
-    }
-
-    if (!prod) {
-        stream = stream.pipe(newer(`${config.projectBuildDir}/${directories.inc.root}`))
-            .pipe(gulp.dest(`${config.projectBuildDir}/${directories.inc.root}`));
+        rebundle();
     } else {
-        stream = stream.pipe(gulp.dest(`${config.projectDistDir}/${directories.inc.root}`));
+        rebundle()
+            .pipe(exit());
     }
-
-    return stream;
 }
 
-gulp.task('inc:build', () => buildIncludes());
-
-gulp.task('inc:dev', () => buildIncludes(false, true));
-
-gulp.task('inc:prod', () => buildIncludes(true));
-
-/**
- * -----------------------------------------------------------------------------
- * View Handling
- *
- * @description Processes view files and copies them to a destination folder.
- * -----------------------------------------------------------------------------
- */
-
-function buildViews(prod = false, watch = false) {
-    let stream = gulp.src(`${config.projectSourceDir}/${directories.views.root}/**/*.*`);
-
-    if (!prod) {
-        stream = stream.pipe(newer(`${config.projectBuildDir}/${directories.views.root}`))
-            .pipe(gulp.dest(config.projectBuildDir));
-    } else {
-        stream = stream.pipe(stripComments.html())
-            .pipe(gulp.dest(config.projectDistDir));
-    }
-
-    if (watch) {
-        stream = stream.pipe(browserSync.stream());
-    }
-
-    return stream;
+function watchScripts() {
+    return compileScripts(true);
 }
 
-gulp.task('views:build', () => buildViews());
+gulp.task('scripts', gulp.parallel(watchScripts), done => done());
 
-gulp.task('views:dev', () => buildViews(false, true));
-
-gulp.task('views:prod', () => buildViews(true));
 
 /**
  * -----------------------------------------------------------------------------
- * Image Rendering
+ * Task: `images`.
  *
- * @description Minifies and readies images for production use.
+ * @description Minifies PNG, JPEG, GIF and SVG images.
+ *
+ * This task does the following:
+ *     1. Gets the source of images raw folder.
+ *     2. Minifies PNG, JPEG, GIF and SVG images.
+ *     3. Generates and saves the optimized images.
  * -----------------------------------------------------------------------------
  */
 
-function buildImages(prod = false, watch = false) {
-    // If there are no files to copy over, exit the function early.
-    if (glob.sync(`${config.projectSourceDir}/${directories.img.root}/**`)
-        .length === 0) {
-        return false;
-    }
+gulp.task('images', () => gulp.src(config.imgSource)
+    .pipe(cache(
+        imagemin([
+            imagemin.gifsicle({
+                interlaced: true,
+                optimizationLevel: 2,
+                colors: 256,
+            }),
+            imagemin.jpegtran({
+                progressive: true,
+                arithmetic: false,
+            }),
+            imagemin.optipng({
+                optimizationLevel: 3,
+                bitDepthReduction: true,
+                colorTypeReduction: true,
+                paletteReduction: true,
+            }),
+            imagemin.svgo({
+                plugins: [{
+                        removeViewBox: false,
+                    },
+                    {
+                        cleanupIDs: false,
+                    },
+                ],
+            }),
+        ])
+    ))
+    .pipe(gulp.dest('./dist/img/'))
+    .pipe(bsReload())
+    .pipe(notify({
+        message: '\n\n✅  ===> IMAGES — completed!\n',
+        onLast: true,
+    })));
 
-    // Import GIF Optimization Options
-    const imgGifInterlace = config.imgGifInterlace.length > 0 ? config.imgGifInterlace : false;
-    const imgGifOptimizationLevel = config.imgGifOptimizationLevel.length > 0 ? config.imgGifOptimizationLevel : 1;
-    const imgGifColors = config.imgGifColors.length > 0 ? config.imgGifColors : 256;
-
-    // Import JPEG Optimization Options
-    const imgJpegProgressive = config.imgJpegProgressive.length > 0 ? config.imgJpegProgressive : true;
-    const imgJpegArithmetic = config.imgJpegArithmetic.length > 0 ? config.imgJpegArithmetic : false;
-
-    // Import PNG Optimization Options
-    const imgPngOptimizationLevel = config.imgPngOptimizationLevel.length > 0 ? config.imgPngOptimizationLevel : 3;
-    const imgPngBitDepthReduction = config.imgPngBitDepthReduction.length > 0 ? config.imgPngBitDepthReduction : true;
-    const imgPngColorTypeReduction = config.imgPngColorTypeReduction.length > 0 ? config.imgPngColorTypeReduction : true;
-
-    const imgPngPaletteReduction = config.imgPngPaletteReduction.length > 0 ? config.imgPngPaletteReduction : true;
-
-    // Import SVG Optimization Options
-    const imgSvgOpts = config.imgSvgOpts.length > 0 ? config.imgSvgOpts : '';
-
-    let stream = gulp.src(`${config.projectSourceDir}/${directories.img.root}/**`);
-
-    if (!prod) {
-        stream = stream.pipe(newer(`${config.projectBuildDir}/${directories.img.root}`));
-    }
-
-    stream = stream.pipe(imagemin([
-        imagemin.gifsicle({
-            interlaced: imgGifInterlace,
-            optimizationLevel: imgGifOptimizationLevel,
-            colors: imgGifColors,
-        }),
-        imagemin.jpegtran({
-            progressive: imgJpegProgressive,
-            arithmetic: imgJpegArithmetic,
-        }),
-        imagemin.optipng({
-            optimizationLevel: imgPngOptimizationLevel,
-            bitDepthReduction: imgPngBitDepthReduction,
-            colorTypeReduction: imgPngColorTypeReduction,
-            paletteReduction: imgPngPaletteReduction,
-        }),
-        imagemin.svgo(imgSvgOpts),
-    ]));
-
-    if (!prod) {
-        stream = stream.pipe(gulp.dest(`${config.projectBuildDir}/${directories.img.root}`));
-    } else {
-        stream = stream.pipe(gulp.dest(`${config.projectDistDir}/${directories.img.root}`));
-    }
-
-    if (watch) {
-        stream = stream.pipe(browserSync.stream());
-    }
-
-    return stream;
-}
-
-gulp.task('img:build', () => buildImages());
-
-gulp.task('img:dev', () => buildImages(false, true));
-
-gulp.task('img:prod', () => buildImages(true));
 
 /**
  * -----------------------------------------------------------------------------
- * File Watcher
+ * Task: `clear-images-cache`.
  *
- * @description Watches files for changes.
+ * @description Deletes the images cache. By running the next "images" task,
+ *              each image will be regenerated.
  * -----------------------------------------------------------------------------
  */
 
-gulp.task('watch', () => {
-    gulp.watch(`${config.projectSourceDir}/${directories.js.root}/**/*.js`, gulp.series('js:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.scss.root}/**/*.scss`, gulp.series('css:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.inc.root}/**.*`, gulp.series('inc:dev', 'bs:reload'));
-    gulp.watch(`${config.projectSourceDir}/${directories.views.root}/**/*.*`, gulp.series('views:dev'));
-    gulp.watch(`${config.projectSourceDir}/${directories.img.root}/**`, gulp.series('img:dev'));
-});
+gulp.task('clearCache', done => cache.clearAll(done));
+
 
 /**
  * -----------------------------------------------------------------------------
- * Main Gulp Tasks
+ * Task: `translate`.
  *
- * @description Gulp tasks for building, development and production.
+ * @description Generates WP POT Translation files.
+ *
+ * This task does the following:
+ *    1. Gets the source of all the PHP files.
+ *    2. Sort files in stream by path or any custom sort comparator.
+ *    3. Applies wpPot with the variable set at the top of this file.
+ *    4. Generate a .pot file of i18n that can be used for l10n to build .mo
+ *       file.
  * -----------------------------------------------------------------------------
  */
 
-gulp.task('render:build', gulp.series('proj:check', 'util:clean', gulp.parallel('js:build', 'css:build', 'inc:build', 'views:build', 'img:build')));
+gulp.task('translate', () => gulp.src(config.watchPHP)
+    .pipe(sort())
+    .pipe(wpPot({
+        domain: config.textDomain,
+        package: config.packageName,
+        bugReport: config.bugReport,
+        lastTranslator: config.lastTranslator,
+        team: config.team
+    }))
+    .pipe(gulp.dest(`${config.translationDestination}/${config.translationFile}`))
+    .pipe(notify({
+        message: '\n\n✅  ===> TRANSLATE — completed!\n',
+        onLast: true,
+    })));
 
-gulp.task('render:dev', gulp.series('proj:check', 'util:clean', gulp.parallel('js:dev', 'css:dev', 'inc:dev', 'views:dev', 'img:dev', runBrowserSync, 'watch')));
 
-gulp.task('render:prod', gulp.parallel('proj:check', 'js:prod', 'css:prod', 'inc:prod', 'views:prod', 'img:prod'));
+/**
+ * -----------------------------------------------------------------------------
+ * Task: `watch`.
+ *
+ * @description Watch tasks for the gulp processes.
+ * -----------------------------------------------------------------------------
+ */
 
-gulp.task('default', () => {
-    console.log('Please use the NPM commands or specific gulp task names rather than running `gulp default`.');
-
-    return false;
-});
+gulp.task('default', gulp.parallel(
+    'styles',
+    'scripts',
+    'images',
+    browsersync,
+    () => {
+        gulp.watch(config.watchViews, bsStream);
+        gulp.watch(config.watchStyles, gulp.parallel('styles'));
+        gulp.watch(config.watchJsCustom, gulp.series('scripts'));
+        gulp.watch(config.imgSRC, gulp.series('images'));
+    },
+));

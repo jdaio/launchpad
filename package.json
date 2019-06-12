@@ -1,6 +1,6 @@
 {
     "name": "launchpad",
-    "description": "A starting point for simple front-end and WordPress development projects.",
+    "description": "A simple production process for front-end and WordPress development.",
     "version": "1.0.0",
     "keywords": [
         "css",
@@ -20,70 +20,82 @@
         "email": "jamal.ali.mohammed@gmail.com",
         "url": "https://jdaio.github.io/"
     },
-    "contributors": [
-        "Digital Heat, LLC."
-    ],
     "repository": {
         "type": "git",
         "url": "git+https://github.com/jdaio/launchpad.git"
     },
     "bugs": {
-        "url": "https://github.com/jdaio/hubandspoke-2018/issues"
+        "url": "https://github.com/jdaio/launchpad/issues"
     },
     "license": "GPL-3.0-or-later",
     "engines": {
-        "node": ">=6",
-        "npm": ">=3"
+        "node": ">=12",
+        "npm": ">=6"
     },
-    "files": [
-        "dist/**/*.*",
-        "src/assets/inc/**/*.*",
-        "src/assets/{js,scss}/*.{js,scss}",
-        "src/html/*.html",
-        "src/media/**/*.{svg,png,jpg,gif,mp4,ogg,mkv,webm}",
-        "src/wp/**/*.{php,twig,txt,png,svg,css}"
-    ],
     "devDependencies": {
-        "@babel/core": "^7.2.2",
-        "@babel/preset-env": "^7.3.1",
-        "@babel/register": "^7.0.0",
-        "autoprefixer": "^9.4.7",
+        "@babel/core": "^7.4.5",
+        "@babel/preset-env": "^7.4.5",
+        "@babel/register": "^7.4.4",
+        "auto-changelog": "^1.13.0",
+        "autoprefixer": "^9.6.0",
         "babelify": "^10.0.0",
-        "browser-sync": "^2.26.3",
+        "beepbeep": "^1.2.2",
+        "browser-sync": "^2.26.7",
         "browserify": "^16.2.3",
         "css-mqpacker": "^7.0.0",
-        "cssnano": "^4.1.8",
-        "del": "^3.0.0",
-        "eslint": "^5.12.1",
+        "cssnano": "^4.1.10",
+        "eslint": "^5.16.0",
         "eslint-config-airbnb-base": "^13.1.0",
-        "eslint-plugin-import": "^2.16.0",
+        "eslint-plugin-import": "^2.17.3",
         "faster.js": "^1.1.0",
-        "fs-extra": "^7.0.1",
-        "glob": "^7.1.3",
-        "gulp": "^4.0.0",
-        "gulp-eslint": "^5.0.0",
-        "gulp-header": "^2.0.7",
-        "gulp-imagemin": "^5.0.3",
-        "gulp-newer": "^1.4.0",
+        "gulp-cache": "^1.1.2",
+        "gulp-exit": "0.0.2",
+        "gulp-imagemin": "^6.0.0",
+        "gulp-line-ending-corrector": "^1.0.3",
+        "gulp-notify": "^3.2.0",
         "gulp-plumber": "^1.2.1",
         "gulp-postcss": "^8.0.0",
         "gulp-rename": "^1.4.0",
-        "gulp-replace": "^1.0.0",
         "gulp-sass": "^4.0.2",
-        "gulp-sourcemaps": "^2.6.4",
-        "gulp-strip-comments": "^2.5.2",
+        "gulp-sort": "^2.0.0",
+        "gulp-sourcemaps": "^2.6.5",
         "gulp-uglify": "^3.0.2",
-        "stylelint": "^9.10.1",
-        "stylelint-config-recommended": "^2.1.0",
+        "gulp-wp-pot": "^2.3.5",
+        "release-it": "^12.3.0",
+        "stylelint": "^10.1.0",
+        "stylelint-config-recommended": "^2.2.0",
+        "stylelint-scss": "^3.8.0",
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "watchify": "^3.11.1"
     },
+    "dependencies": {
+        "gulp": "^4.0.2"
+    },
     "scripts": {
-        "setup": "gulp proj:init",
-        "reset": "gulp util:clean",
-        "build": "gulp render:build",
-        "dev": "gulp render:dev",
-        "prod": "gulp render:prod"
+        "start": "gulp",
+        "css": "gulp styles",
+        "js": "gulp scripts",
+        "images": "gulp images",
+        "clearCache": "gulp clearCache",
+        "translate": "gulp translate",
+        "log": "auto-changelog && git add . && git ci -m ' 📖 DOC: Update the changelog' && git push",
+        "release": "release-it",
+        "release-minor": "release-it minor",
+        "release-major": "release-it major",
+        "release-dry": "release-it --dry-run",
+        "release-beta": "release-it --preRelease=beta"
+    },
+    "auto-changelog": {
+        "output": "CHANGELOG.md",
+        "template": ".vscode/clTemplate.hbs",
+        "commitLimit": false,
+        "package": true,
+        "replaceText": {
+            "FIX: ": "",
+            "NEW: ": "",
+            "IMPROVE: ": "",
+            "DOC: ": ""
+        }
     }
 }

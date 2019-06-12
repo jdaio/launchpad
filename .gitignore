@@ -6,22 +6,24 @@
 
 # Packages
 *.7z
+*.bz2
 *.dmg
 *.gz
-*.bz2
 *.iso
 *.jar
+*.map
 *.rar
 *.tar
-*.zip
 *.tgz
-*.map
+*.zip
 
 # Logs and Databases
+*.env
 *.log
 *.sql
 
 # macOS / Windows Generated Files
+**.DS_Store*
 *.esproj
 *.sublime-project
 *.sublime-workspace
@@ -29,7 +31,6 @@
 ._*
 .AppleDouble
 .cache
-.DS_Store
 .LSOverride
 .project
 .settings
@@ -46,9 +47,9 @@ Thumbs.db
 **/.sass-cache
 **/.sass-cache/*
 **/.map
-*.map
 
 # NPM
+node_modules/
 /node_modules/
 npm-debug.log
 
@@ -60,3 +61,11 @@ build/**
 .idea
 .vscode
 library/vendors/composer
+/codekit-config.json
+*.codekit
+**.codekit-cache/*
+
+# Composer
+!assets/js/vendor/
+wpcs/
+/vendor/

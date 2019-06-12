@@ -1,4 +1,5 @@
 **/*.min.js
 **/dist/
-**/vendor/
 **/build/
+**/node_modules/**
+**/vendor/**
