@@ -29,6 +29,7 @@
 import gulp from 'gulp';
 
 // Import CSS Modules
+import easings from 'postcss-easings';
 import mqp from 'css-mqpacker';
 import nano from 'cssnano';
 import postcss from 'gulp-postcss';
@@ -103,11 +104,7 @@ function runBrowserSync() {
 
 function bsReload(done) {
     browserSync.reload();
-    done();
-}
 
-function bsStream(done) {
-    browserSync.stream();
     done();
 }
 
@@ -151,10 +148,12 @@ gulp.task('styles', () => gulp.src(config.styleEntry, {
                 browsers: config.BROWSERS_LIST,
             },
         }),
+        easings(),
     ]))
     .pipe(sourcemaps.write('./'))
     .pipe(lineec())
     .pipe(gulp.dest('./dist/css'))
+    .pipe(browserSync.stream())
     .on('end', () => log('✅ STYLES — completed!')));
 
 
@@ -254,6 +253,7 @@ gulp.task('images', () => gulp.src(config.imgSource)
         ])
     ))
     .pipe(gulp.dest('./dist/img/'))
+    .pipe(browserSync.stream())
     .on('end', () => log('✅ IMAGES — completed!')));
 
 
@@ -321,9 +321,9 @@ gulp.task('translate', () => gulp.src(config.watchPHP)
 
 gulp.task('watch', () => {
     gulp.watch(config.watchViews, gulp.series(renderViews));
-    gulp.watch(config.watchStyles, gulp.series('styles', bsStream));
-    gulp.watch(config.watchScripts, gulp.series('scripts:dev', bsReload));
-    gulp.watch(config.imgSource, gulp.series('images', bsStream));
+    gulp.watch(config.watchStyles, gulp.series('styles'));
+    gulp.watch(config.watchScripts, gulp.series('scripts:dev'));
+    gulp.watch(config.imgSource, gulp.series('images'));
 });
 
 gulp.task('default', gulp.parallel('styles', 'scripts:dev', 'images', runBrowserSync, 'watch'));
