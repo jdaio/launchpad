@@ -39,7 +39,6 @@
 .Trashes
 Desktop.ini
 ehthumbs.db
-Icon?
 nbproject
 Thumbs.db
 
@@ -59,13 +58,12 @@ build/**
 
 # IDEs & Editors
 .idea
-.vscode
 library/vendors/composer
 /codekit-config.json
 *.codekit
 **.codekit-cache/*
 
 # Composer
-!assets/js/vendor/
+# !assets/js/vendor/
 wpcs/
 /vendor/

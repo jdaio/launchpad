@@ -60,29 +60,11 @@ module.exports = {
 
 
     /**
-     * Translation Options
+     * Included File Options
      */
 
-    // Theme textdomain
-    textDomain: 'launchpad',
-
-    // Translation File Name
-    translationFile: 'launchpad.pot',
-
-    // Translation File Directory
-    translationDestination: './languages',
-
-    // Package Name
-    packageName: 'launchpad',
-
-    // Bug Report URL
-    bugReport: '#',
-
-    // Last Translator Email ID
-    lastTranslator: 'Jamal Ali-Mohammed <jamal.ali.mohammed@gmail.com>',
-
-    // Team's Email ID
-    team: 'Digital Heat <team@digitalheat.co>',
+    // Includes Source Folder
+    incSource: './assets/inc/**/*',
 
 
     /**

@@ -50,7 +50,6 @@ import imagemin from 'gulp-imagemin';
 
 // Import Wordpress Related Modules
 import sort from 'gulp-sort';
-import wpPot from 'gulp-wp-pot';
 
 // Import Utility Modules
 import browserSync from 'browser-sync';
@@ -100,12 +99,6 @@ function runBrowserSync() {
         server: ['./', './html'],
         watchEvents: ['change', 'add', 'unlink', 'addDir', 'unlinkDir'],
     });
-}
-
-function bsReload(done) {
-    browserSync.reload();
-
-    done();
 }
 
 /**
@@ -271,6 +264,20 @@ gulp.task('clearCache', done => cache.clearAll(done));
 
 /**
  * -----------------------------------------------------------------------------
+ * Task: `includes`.
+ *
+ * @description Copies included files to the distribution folder.
+ * -----------------------------------------------------------------------------
+ */
+
+gulp.task('includes', () => gulp.src(config.incSource)
+    .pipe(gulp.dest('./dist/inc/'))
+    .pipe(browserSync.stream())
+    .on('end', () => log('✅ INCLUDES — completed!')));
+
+
+/**
+ * -----------------------------------------------------------------------------
  * Task: `views:dev`.
  *
  * @description Watch HTML files for changes and inject the new code.
@@ -281,34 +288,6 @@ function renderViews() {
     return gulp.src(config.watchViews)
         .pipe(browserSync.stream());
 }
-
-
-/**
- * -----------------------------------------------------------------------------
- * Task: `translate`.
- *
- * @description Generates WP POT Translation files.
- *
- * This task does the following:
- *    1. Gets the source of all the PHP files.
- *    2. Sort files in stream by path or any custom sort comparator.
- *    3. Applies wpPot with the variable set at the top of this file.
- *    4. Generate a .pot file of i18n that can be used for l10n to build .mo
- *       file.
- * -----------------------------------------------------------------------------
- */
-
-gulp.task('translate', () => gulp.src(config.watchPHP)
-    .pipe(sort())
-    .pipe(wpPot({
-        domain: config.textDomain,
-        package: config.packageName,
-        bugReport: config.bugReport,
-        lastTranslator: config.lastTranslator,
-        team: config.team,
-    }))
-    .pipe(gulp.dest(`${config.translationDestination}/${config.translationFile}`))
-    .on('end', () => log('✅ TRANSLATE — completed!')));
 
 
 /**
@@ -324,6 +303,7 @@ gulp.task('watch', () => {
     gulp.watch(config.watchStyles, gulp.series('styles'));
     gulp.watch(config.watchScripts, gulp.series('scripts:dev'));
     gulp.watch(config.imgSource, gulp.series('images'));
+    gulp.watch(config.incSource, gulp.series('includes'));
 });
 
-gulp.task('default', gulp.parallel('styles', 'scripts:dev', 'images', runBrowserSync, 'watch'));
+gulp.task('default', gulp.parallel('styles', 'scripts:dev', 'images', 'includes', runBrowserSync, 'watch'));

@@ -1,5 +1,3 @@
-Copyright (c) 2019 Jamal Ali-Mohammed.
-
 This software is distributed under the GPL v3 license. You may redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation.
 
 You should have received a copy of the GNU General Public License
