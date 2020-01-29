@@ -1,7 +1,7 @@
 {
     "name": "launchpad",
     "description": "A simple production process for front-end development.",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "keywords": [
         "css",
         "front-end",
@@ -78,7 +78,6 @@
         "scripts": "gulp scripts:build",
         "images": "gulp images",
         "clearCache": "gulp clearCache",
-        "translate": "gulp translate",
         "log": "auto-changelog && git add . && git ci -m ' DOC: Update the changelog' && git push",
         "release": "release-it",
         "release-minor": "release-it minor",
