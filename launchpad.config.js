@@ -9,17 +9,6 @@
 
 module.exports = {
     /**
-     * Project Options
-     */
-
-    // URL to local WordPress site.
-    projectURL: '127.0.0.1',
-
-    // Theme/Plugin URL. Leave as default if gulpfile is in root folder.
-    productURL: './',
-
-
-    /**
      * CSS Handling Options
      */
 
@@ -79,7 +68,4 @@ module.exports = {
 
     // HTML Files
     watchViews: './html/**/*.html',
-
-    // PHP Files
-    watchPHP: './src/**/*.php',
 };

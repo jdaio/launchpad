@@ -19,13 +19,12 @@ about: "If something isn't working as expected."
 ### Expected Behavior
 
 <!--
-  How did you expect the tool to behave?
+  How did you expect Launchpad to behave?
   It’s fine if you’re not sure your understanding is correct.
   Just write down what you thought would happen.
 -->
 
 (Write what you thought would happen.)
-
 
 ### Actual Behavior
 
@@ -36,7 +35,6 @@ about: "If something isn't working as expected."
 -->
 
 (Write what happened. Please add screenshots!)
-
 
 ### Steps to Reproduce
 
@@ -61,8 +59,8 @@ about: "If something isn't working as expected."
 
 Then, specify:
 
-1. Operating system:
-2. Browser and version (if relevant):
+1. Operating System:
+2. Browser and Version (If it's relevant.):
 
 **Possible Solution**
 <!--- Only if you have suggestions on a fix for the bug -->
@@ -75,10 +73,10 @@ Then, specify:
 
   There are two ways to do it:
 
-    * Create a new app and try to reproduce the issue in it.
+    * Create a new project and try to reproduce the issue in it.
       This is useful if you roughly know where the problem is, or can’t share the real code.
 
-    * Or, copy your app and remove things until you’re left with the minimal reproducible demo.
+    * Or, copy your project/app and remove things until you’re left with the minimal reproducible demo.
       This is useful for finding the root cause. You may then optionally create a new project.
 
   This is a good guide to creating bug demos: https://stackoverflow.com/help/mcve
@@ -88,14 +86,5 @@ Then, specify:
 (Paste the link to an example project and exact instructions to reproduce the issue.)
 
 <!--
-  What happens if you skip this step?
-
-  We will try to help you, but in many cases it is impossible because crucial
-  information is missing. In that case we'll tag an issue as having a low priority,
-  and eventually close it if there is no clear direction.
-
-  We still appreciate the report though, as eventually somebody else might
-  create a reproducible example for it.
-
-  Thanks for helping us help you!
+  Thanks for the bug hunting assist!
 -->

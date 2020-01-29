@@ -48,9 +48,6 @@ import watchify from 'watchify';
 // Import Image Related Modules
 import imagemin from 'gulp-imagemin';
 
-// Import Wordpress Related Modules
-import sort from 'gulp-sort';
-
 // Import Utility Modules
 import browserSync from 'browser-sync';
 import cache from 'gulp-cache';
